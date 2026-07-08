@@ -5,3 +5,11 @@ coverage
 dist
 node_modules
 PACKAGE_VERSION
+
+# Local-only MV3 migration working notes (kept on disk, never published)
+/docs/README.md
+/docs/mv3-migration-notes.md
+/docs/mv3-migration-memory/
+
+# Packaged store builds (build artifacts)
+/*.zip
