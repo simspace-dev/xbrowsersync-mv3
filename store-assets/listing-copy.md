@@ -50,7 +50,7 @@ xBrowserSync project. It exists to keep the extension working under Manifest V3.
 the original xBrowserSync authors for their excellent work.
 
 Source code: https://github.com/simspace-dev/xbrowsersync-mv3
-Privacy policy: <paste the hosted PRIVACY.md URL here>
+Privacy policy: https://github.com/simspace-dev/xbrowsersync-mv3/blob/main/store-assets/PRIVACY.md
 ```
 
 ## Privacy practices form (Developer Dashboard answers)
@@ -72,7 +72,7 @@ Use these when filling the **Privacy practices** tab.
   - ✅ I do not sell or transfer user data to third parties, outside of the approved use cases.
   - ✅ I do not use or transfer user data for purposes unrelated to my item's single purpose.
   - ✅ I do not use or transfer user data to determine creditworthiness or for lending purposes.
-- **Privacy policy URL:** the hosted URL of `PRIVACY.md` (see hosting note below).
+- **Privacy policy URL:** `https://github.com/simspace-dev/xbrowsersync-mv3/blob/main/store-assets/PRIVACY.md`
 
 ## Assets checklist (you supply)
 
