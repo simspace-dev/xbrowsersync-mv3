@@ -44,12 +44,16 @@ export class NetworkService {
   }
 
   isNetworkConnected(): boolean {
-    return (window as any).Connection &&
-      (window.navigator as any).connection &&
-      (window.navigator as any).connection.type
-      ? (window.navigator as any).connection.type !== (window as any).Connection.NONE &&
-          (window.navigator as any).connection.type !== (window as any).Connection.UNKNOWN
-      : window.navigator.onLine;
+    // MV3 background runs as a service worker with no `window`. Use `navigator`/`globalThis`,
+    // which exist in both worker and page contexts. `Connection` is a Cordova (Android) global
+    // and `navigator.connection` its plugin; on webext these are undefined so we fall back to
+    // `navigator.onLine`.
+    const nav = typeof navigator !== 'undefined' ? (navigator as any) : undefined;
+    // eslint-disable-next-line no-undef, no-restricted-globals
+    const cordovaConnection = (self as any).Connection;
+    return cordovaConnection && nav?.connection && nav.connection.type
+      ? nav.connection.type !== cordovaConnection.NONE && nav.connection.type !== cordovaConnection.UNKNOWN
+      : !!nav?.onLine;
   }
 
   isNetworkConnectionError(err: Error): boolean {

@@ -73,9 +73,9 @@ const $timeoutFactory = (): ng.ITimeoutService => {
   $timeout.cancel = (promise: any): boolean => {
     if (promise && promise.$$timeoutId != null) {
       clearTimeout(promise.$$timeoutId);
-      if (promise.$$reject) {
-        promise.$$reject(new Error('$timeout cancelled'));
-      }
+      // Deliberately do NOT reject the promise. Callers (e.g. refreshNativeInterface) cancel timeouts
+      // fire-and-forget without attaching a .catch, so rejecting here surfaced as an "Uncaught (in
+      // promise) Error: $timeout cancelled" in the service worker. The scheduled fn simply never runs.
       return true;
     }
     return false;

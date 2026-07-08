@@ -11,7 +11,6 @@ import {
   MoveNativeBookmarkChangeData
 } from '../../../../shared/bookmark/bookmark.interface';
 import {
-  BaseError,
   BookmarkMappingNotFoundError,
   ContainerNotFoundError,
   FailedCreateNativeBookmarksError,
@@ -225,40 +224,16 @@ export class ChromiumBookmarkService extends WebExtBookmarkService {
   }
 
   disableEventListeners(): ng.IPromise<void> {
-    return this.$q
-      .all([
-        (browser.bookmarks as any).onChildrenReordered.removeListener(this.onNativeBookmarkChildrenReordered),
-        browser.bookmarks.onCreated.removeListener(this.onNativeBookmarkCreated),
-        browser.bookmarks.onRemoved.removeListener(this.onNativeBookmarkRemoved),
-        browser.bookmarks.onChanged.removeListener(this.onNativeBookmarkChanged),
-        browser.bookmarks.onMoved.removeListener(this.onNativeBookmarkMoved)
-      ])
-      .then(() => {})
-      .catch((err) => {
-        this.logSvc.logWarning('Failed to disable event listeners');
-        throw new BaseError(undefined, err);
-      });
+    // MV3: the native bookmark listeners are registered permanently at the top of the service worker
+    // (see chromium-background.module.ts) so the worker wakes when bookmarks change. Removing them
+    // here would break that, so instead we suppress event handling via a flag while syncing.
+    this.nativeEventsSuppressed = true;
+    return this.$q.resolve();
   }
 
   enableEventListeners(): ng.IPromise<void> {
-    return this.disableEventListeners()
-      .then(() => {
-        return this.utilitySvc.isSyncEnabled();
-      })
-      .then((syncEnabled) => {
-        if (!syncEnabled) {
-          return;
-        }
-        browser.bookmarks.onCreated.addListener(this.onNativeBookmarkCreated);
-        browser.bookmarks.onRemoved.addListener(this.onNativeBookmarkRemoved);
-        browser.bookmarks.onChanged.addListener(this.onNativeBookmarkChanged);
-        (browser.bookmarks as any).onChildrenReordered.addListener(this.onNativeBookmarkChildrenReordered);
-        browser.bookmarks.onMoved.addListener(this.onNativeBookmarkMoved);
-      })
-      .catch((err) => {
-        this.logSvc.logWarning('Failed to enable event listeners');
-        throw new BaseError(undefined, err);
-      });
+    this.nativeEventsSuppressed = false;
+    return this.$q.resolve();
   }
 
   ensureContainersExist(bookmarks: Bookmark[]): Bookmark[] {

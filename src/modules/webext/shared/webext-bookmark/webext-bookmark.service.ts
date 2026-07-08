@@ -56,6 +56,12 @@ export abstract class WebExtBookmarkService implements BookmarkService {
   processNativeBookmarkEventsTimeout: ng.IPromise<void>;
   unsupportedContainers: string[] = [];
 
+  // When true, native bookmark change events are ignored. Used to prevent feedback loops while the
+  // extension itself writes to native bookmarks during a sync. In MV3 the native listeners are
+  // registered permanently at the top of the service worker (so the worker wakes on bookmark
+  // changes), so suppression via this flag replaces the old add/removeListener toggling.
+  nativeEventsSuppressed = false;
+
   static $inject = [
     '$injector',
     '$q',
@@ -904,16 +910,25 @@ export abstract class WebExtBookmarkService implements BookmarkService {
       }
     };
 
-    // Iterate through the queue and process the events
-    this.utilitySvc.asyncWhile<any>(this.nativeBookmarkEventsQueue, condition, action).then(() => {
-      this.$timeout(() => {
-        this.syncSvc.executeSync().then(() => {
-          // Move native unsupported containers into the correct order
-          return this.disableEventListeners()
-            .then(() => this.reorderUnsupportedContainers())
-            .then(() => this.enableEventListeners());
-        });
-      }, 100);
+    // Native listeners are registered permanently in MV3, so only process the queue while sync is
+    // actually enabled; otherwise discard the queued events.
+    this.utilitySvc.isSyncEnabled().then((syncEnabled) => {
+      if (!syncEnabled) {
+        this.nativeBookmarkEventsQueue = [];
+        return;
+      }
+
+      // Iterate through the queue and process the events
+      this.utilitySvc.asyncWhile<any>(this.nativeBookmarkEventsQueue, condition, action).then(() => {
+        this.$timeout(() => {
+          this.syncSvc.executeSync().then(() => {
+            // Move native unsupported containers into the correct order
+            return this.disableEventListeners()
+              .then(() => this.reorderUnsupportedContainers())
+              .then(() => this.enableEventListeners());
+          });
+        }, 100);
+      });
     });
   }
 
@@ -944,6 +959,11 @@ export abstract class WebExtBookmarkService implements BookmarkService {
   }
 
   queueNativeBookmarkEvent(changeType: BookmarkChangeType, ...eventArgs: any[]): void {
+    // Ignore events triggered by the extension's own native bookmark writes during a sync
+    if (this.nativeEventsSuppressed) {
+      return;
+    }
+
     // Clear timeout
     if (this.processNativeBookmarkEventsTimeout) {
       this.$timeout.cancel(this.processNativeBookmarkEventsTimeout);

@@ -53,7 +53,7 @@ export abstract class StoreService {
           this.setInStore(StoreKey.DisplayPermissions, false),
           this.setInStore(StoreKey.DisplayTelemetryCheck, true),
           this.setInStore(StoreKey.DisplayUpdated, false),
-          this.setInStore(StoreKey.SyncBookmarksToolbar, false),
+          this.setInStore(StoreKey.SyncBookmarksToolbar, true),
           this.setInStore(StoreKey.SyncEnabled, false),
           this.setInStore(StoreKey.TelemetryEnabled, true)
         ]);

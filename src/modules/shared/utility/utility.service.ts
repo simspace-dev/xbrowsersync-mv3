@@ -230,8 +230,9 @@ export class UtilityService {
 
   parseUrl(url: string): Url {
     const searchObject: any = {};
-    const parser = document.createElement('a');
-    parser.href = url;
+    // Use the standard URL API instead of a DOM anchor element so this works in the
+    // MV3 background service worker (no `document`). Field names/formats match the anchor.
+    const parser = new URL(url);
     const queries = parser.search.replace(/^\?/, '').split('&');
 
     let split;

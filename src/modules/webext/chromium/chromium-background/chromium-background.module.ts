@@ -18,11 +18,25 @@ setupAngularShim();
 (self as any).__xbs_isBackground = true;
 
 // Create the DI container with Chromium-specific services
-const { backgroundSvc } = createBackgroundContainer({
+const { backgroundSvc, injector } = createBackgroundContainer({
   BookmarkServiceClass: ChromiumBookmarkService,
   PlatformServiceClass: ChromiumPlatformService,
   UpgradeProviderServiceClass: WebExtV160UpgradeProviderService
 });
+
+// Register native bookmark event listeners synchronously at the top level (required for MV3): the
+// browser only wakes an idle service worker for events whose listeners were added during the initial
+// synchronous evaluation of the worker script. Previously these were added later inside init()
+// (which only runs on onStartup/onInstalled), so after the worker restarted on demand, bookmark
+// changes were never seen. The handlers self-gate via a suppression flag + a sync-enabled check.
+const bookmarkSvc = injector.get('BookmarkService') as any;
+browser.bookmarks.onCreated.addListener(bookmarkSvc.onNativeBookmarkCreated);
+browser.bookmarks.onRemoved.addListener(bookmarkSvc.onNativeBookmarkRemoved);
+browser.bookmarks.onChanged.addListener(bookmarkSvc.onNativeBookmarkChanged);
+browser.bookmarks.onMoved.addListener(bookmarkSvc.onNativeBookmarkMoved);
+if ((browser.bookmarks as any).onChildrenReordered) {
+  (browser.bookmarks as any).onChildrenReordered.addListener(bookmarkSvc.onNativeBookmarkChildrenReordered);
+}
 
 // Register event handlers synchronously (required for MV3 service workers)
 let startupInitiated = false;

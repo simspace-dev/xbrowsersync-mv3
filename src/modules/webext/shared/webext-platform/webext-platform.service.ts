@@ -342,14 +342,14 @@ export abstract class WebExtPlatformService implements PlatformService {
         // Set a delay if finished syncing to prevent flickering when executing many syncs
         if (currentTitle.indexOf(syncingTitle) > 0 && newTitle.indexOf(syncedTitle)) {
           this.refreshInterfaceTimeout = this.$timeout(() => {
-            (browser.action || browser.browserAction).setIcon({ path: iconPath });
+            (browser.action || browser.browserAction).setIcon({ path: browser.runtime.getURL(iconPath) });
             (browser.action || browser.browserAction).setTitle({ title: newTitle });
           }, 350);
           iconUpdated.resolve();
           titleUpdated.resolve();
         } else {
           (browser.action || browser.browserAction)
-            .setIcon({ path: iconPath })
+            .setIcon({ path: browser.runtime.getURL(iconPath) })
             .then(iconUpdated.resolve, iconUpdated.reject);
           (browser.action || browser.browserAction)
             .setTitle({ title: newTitle })
