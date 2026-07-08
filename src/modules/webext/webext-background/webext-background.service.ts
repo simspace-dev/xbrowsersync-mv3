@@ -189,6 +189,22 @@ export class WebExtBackgroundService {
     });
   }
 
+  @boundMethod
+  checkForSyncUpdatesOnFocus(): Promise<void> {
+    // Triggered when the user focuses this profile's browser window or switches tabs, so the profile
+    // being looked at pulls remote changes within ~1-2s instead of waiting for the periodic alarm.
+    // Returns a native Promise (not $q) so the MV3 service worker is kept alive until the check
+    // completes — same keepalive rationale as onAlarm/onMessage. No-ops silently when sync is
+    // disabled; network errors are swallowed (the periodic alarm remains the reliable fallback).
+    return new Promise<void>((resolve) => {
+      const done = (): void => resolve();
+      this.utilitySvc
+        .isSyncEnabled()
+        .then((syncEnabled) => (syncEnabled ? this.checkForSyncUpdates() : undefined))
+        .then(done, done);
+    });
+  }
+
   displayAlert(alert: Alert, url?: string): void {
     // Strip html tags from message
     const urlRegex = new RegExp(Globals.URL.ValidUrlRegex, 'i');

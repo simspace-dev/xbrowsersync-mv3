@@ -38,6 +38,32 @@ if ((browser.bookmarks as any).onChildrenReordered) {
   (browser.bookmarks as any).onChildrenReordered.addListener(bookmarkSvc.onNativeBookmarkChildrenReordered);
 }
 
+// Trigger a lightweight update check when the user focuses this profile's window or switches tabs, so
+// the profile being looked at pulls remote changes within ~1-2s instead of waiting for the periodic
+// alarm. Registered synchronously at top level (MV3 requirement) so an idle worker wakes on these
+// events; the handler returns the async promise so Chromium keeps the worker alive until it completes.
+// Throttled so rapid focus/tab churn triggers at most one server round-trip per interval.
+const focusCheckThrottleMs = 3000;
+let lastFocusCheck = 0;
+const triggerFocusSyncCheck = (): Promise<void> => {
+  const now = Date.now();
+  if (now - lastFocusCheck < focusCheckThrottleMs) {
+    return Promise.resolve();
+  }
+  lastFocusCheck = now;
+  return backgroundSvc.checkForSyncUpdatesOnFocus();
+};
+
+browser.windows.onFocusChanged.addListener((windowId) => {
+  // WINDOW_ID_NONE (-1) means all of this profile's windows lost focus — nothing to check
+  if (windowId === browser.windows.WINDOW_ID_NONE) {
+    return Promise.resolve();
+  }
+  return triggerFocusSyncCheck();
+});
+
+browser.tabs.onActivated.addListener(() => triggerFocusSyncCheck());
+
 // Register event handlers synchronously (required for MV3 service workers)
 let startupInitiated = false;
 

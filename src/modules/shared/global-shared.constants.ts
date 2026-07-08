@@ -5,7 +5,7 @@ export default {
     },
     SyncUpdatesCheck: {
       Name: 'ALARM_SYNC_UPDATES_CHECK',
-      Period: 15
+      Period: 2
     }
   },
   Bookmarks: {
