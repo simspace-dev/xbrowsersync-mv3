@@ -316,16 +316,27 @@ export class WebExtBackgroundService {
   }
 
   @boundMethod
-  onAlarm(alarm: Alarms.Alarm): void {
-    switch (alarm?.name) {
-      case Globals.Alarms.AutoBackUp.Name:
-        this.backupRestoreSvc.runAutoBackUp();
-        break;
-      case Globals.Alarms.SyncUpdatesCheck.Name:
-        this.checkForSyncUpdates();
-        break;
-      default:
-    }
+  onAlarm(alarm: Alarms.Alarm): Promise<void> {
+    // Return a native Promise (not $q) so the MV3 service worker is kept alive until the async work
+    // finishes. The worker is woken solely to deliver this alarm; the previous void return let
+    // Chromium terminate it before the sync-updates check completed its network round-trip, so the
+    // scheduled 15-minute auto-pull fired but silently never applied downloaded changes. Mirrors the
+    // native-Promise keepalive pattern used by onMessage above.
+    return new Promise<void>((resolve) => {
+      const done = (): void => resolve();
+      let action: any;
+      switch (alarm?.name) {
+        case Globals.Alarms.AutoBackUp.Name:
+          action = this.backupRestoreSvc.runAutoBackUp();
+          break;
+        case Globals.Alarms.SyncUpdatesCheck.Name:
+          action = this.checkForSyncUpdates();
+          break;
+        default:
+          action = this.$q.resolve();
+      }
+      this.$q.when(action).then(done, done);
+    });
   }
 
   onInstall(reason?: string): void {
