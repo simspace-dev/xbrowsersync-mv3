@@ -257,9 +257,41 @@ const setupAngularShim = (): void => {
     isNumber: (value: any): boolean => typeof value === 'number',
     isObject: (value: any): boolean => value !== null && typeof value === 'object',
     isArray: Array.isArray,
-    copy: <T>(source: T): T => {
-      if (source === null || source === undefined) return source;
-      return JSON.parse(JSON.stringify(source));
+    // Mirrors AngularJS angular.copy: with one arg, returns a deep copy of source;
+    // with two args, deep-copies source INTO destination in place (emptying destination
+    // first) and returns destination. The in-place form is relied on by e.g.
+    // bookmarkHelper.modifyBookmarkById (angular.copy(newBookmark, existingBookmark)),
+    // so a source-only shim silently drops bookmark edits.
+    copy: <T>(source: T, destination?: any): T => {
+      const emptyDestination = (dest: any): void => {
+        if (Array.isArray(dest)) {
+          dest.length = 0;
+        } else if (dest !== null && typeof dest === 'object') {
+          Object.keys(dest).forEach((key) => delete dest[key]);
+        }
+      };
+
+      if (source === null || source === undefined) {
+        if (destination !== undefined && destination !== null && destination !== source) {
+          emptyDestination(destination);
+        }
+        return (destination === undefined ? source : destination) as T;
+      }
+
+      const copied = JSON.parse(JSON.stringify(source));
+      if (destination === undefined || destination === null || destination === source) {
+        return copied;
+      }
+
+      emptyDestination(destination);
+      if (Array.isArray(destination) && Array.isArray(copied)) {
+        destination.push(...copied);
+      } else {
+        Object.keys(copied).forEach((key) => {
+          destination[key] = copied[key];
+        });
+      }
+      return destination as T;
     },
     equals: (a: any, b: any): boolean => JSON.stringify(a) === JSON.stringify(b),
     noop: () => {},

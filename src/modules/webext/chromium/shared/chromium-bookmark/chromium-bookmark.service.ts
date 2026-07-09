@@ -478,9 +478,10 @@ export class ChromiumBookmarkService extends WebExtBookmarkService {
       const [changedBookmark] = results;
 
       // If bookmark is separator update native bookmark properties
-      (this.isSeparator(changedBookmark)
-        ? this.convertNativeBookmarkToSeparator(changedBookmark)
-        : this.$q.resolve(changedBookmark)
+      return (
+        this.isSeparator(changedBookmark)
+          ? this.convertNativeBookmarkToSeparator(changedBookmark)
+          : this.$q.resolve(changedBookmark)
       ).then((bookmarkNode) => {
         // If the bookmark was converted to a separator, update id mapping
         let updateMappingPromise: ng.IPromise<void>;
